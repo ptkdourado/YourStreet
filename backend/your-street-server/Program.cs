@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using your_street_server.Data;
+using DotNetEnv;
+
+// Carregar variáveis de ambiente do arquivo .env
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,26 +14,17 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configurar autenticação
-builder.Services.AddAuthentication(options =>
+// Configurar cache para sessões
+builder.Services.AddDistributedMemoryCache();
+
+// Configurar sessões
+builder.Services.AddSession(options =>
 {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-})
-.AddCookie(options =>
-{
-    options.LoginPath = "/api/auth/login/google";
-    options.LogoutPath = "/api/auth/logout";
-})
-.AddGoogle(options =>
-{
-    options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
-    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
-    options.SaveTokens = true;
-    
-    // Escopos necessários do Google
-    options.Scope.Add("profile");
-    options.Scope.Add("email");
+    options.Cookie.Name = ".YourStreet.Session";
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // Configurar CORS
@@ -39,9 +32,10 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
     {
-        builder.AllowAnyOrigin()
+        builder.WithOrigins("http://localhost:5173", "http://localhost:5174", "https://localhost:5173", "https://localhost:5174")
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               .AllowCredentials(); // Importante para cookies de sessão
     });
 });
 
@@ -54,15 +48,19 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseDeveloperExceptionPage();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 // Aplicar CORS
 app.UseCors();
 
-// Configurar autenticação
-app.UseAuthentication();
+// Usar sessões (deve vir antes da autorização)
+app.UseSession();
+
 app.UseAuthorization();
 
 app.MapControllers();

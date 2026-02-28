@@ -75,6 +75,7 @@ Edite os arquivos `appsettings.json` e `appsettings.Development.json`:
 3. **Executar a aplicação**:
    ```bash
    dotnet run
+   dotnet run --launch-profile https
    ```
 
 4. **Testar o login**:

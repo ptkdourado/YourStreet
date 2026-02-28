@@ -1,9 +1,6 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using System.Text.Json;
 using your_street_server.Data;
 using your_street_server.Models;
 
@@ -23,95 +20,170 @@ public class AuthController : ControllerBase
     [HttpGet("login/google")]
     public IActionResult GoogleLogin()
     {
-        var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
-        var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
-        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        // URL Google OAuth manual
+        var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback/google";
+        var scope = "openid profile email";
+        var state = Guid.NewGuid().ToString();
+        
+        // Salvar state no session/cache temporário (para produção use Redis)
+        HttpContext.Session.SetString("oauth_state", state);
+        
+        var googleAuthUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
+            $"client_id={clientId}&" +
+            $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+            $"scope={Uri.EscapeDataString(scope)}&" +
+            $"response_type=code&" +
+            $"state={state}";
+            
+        return Redirect(googleAuthUrl);
     }
 
     [HttpGet("callback/google")]
-    public async Task<IActionResult> GoogleCallback()
+    public async Task<IActionResult> GoogleCallback(string code, string state)
     {
-        var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
-        
-        if (!result.Succeeded)
+        // Verificar state
+        var savedState = HttpContext.Session.GetString("oauth_state");
+        if (string.IsNullOrEmpty(savedState) || savedState != state)
         {
-            return BadRequest("Falha na autenticação com Google");
+            return BadRequest("Estado OAuth inválido");
         }
 
-        var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
-        var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
-        var picture = result.Principal.FindFirst("picture")?.Value;
-
-        if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+        if (string.IsNullOrEmpty(code))
         {
-            return BadRequest("Informações incompletas do Google");
+            return BadRequest("Código de autorização não encontrado");
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
-        
-        if (user == null)
+        try
         {
-            // Criar novo usuário
-            user = new User
+            // Trocar code por access token
+            var tokenResponse = await ExchangeCodeForTokenAsync(code);
+            
+            if (tokenResponse == null)
             {
-                GoogleId = googleId,
-                Email = email,
-                Name = name,
-                Picture = picture,
-                CreatedAt = DateTime.UtcNow,
-                LastLoginAt = DateTime.UtcNow
-            };
-            
-            _context.Users.Add(user);
-        }
-        else
-        {
-            // Atualizar último login
-            user.LastLoginAt = DateTime.UtcNow;
-            
-            // Atualizar informações caso tenham mudado
-            user.Email = email;
-            user.Name = name;
-            user.Picture = picture;
-            
-            _context.Users.Update(user);
-        }
+                return BadRequest("Falha ao obter token de acesso");
+            }
 
-        await _context.SaveChangesAsync();
+            // Obter informações do usuário
+            var userInfo = await GetUserInfoAsync(tokenResponse.access_token);
+            
+            if (userInfo == null)
+            {
+                return BadRequest("Falha ao obter informações do usuário");
+            }
 
-        // Aqui você pode implementar JWT ou sessão
-        // Para simplicidade, vou apenas retornar os dados do usuário
-        return Ok(new
+            // Salvar ou atualizar usuário no banco
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == userInfo.id);
+            
+            if (user == null)
+            {
+                user = new User
+                {
+                    GoogleId = userInfo.id,
+                    Email = userInfo.email,
+                    Name = userInfo.name,
+                    Picture = userInfo.picture,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+                
+                _context.Users.Add(user);
+            }
+            else
+            {
+                user.LastLoginAt = DateTime.UtcNow;
+                user.Email = userInfo.email;
+                user.Name = userInfo.name;
+                user.Picture = userInfo.picture;
+                
+                _context.Users.Update(user);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Criar cookie de sessão simples
+            HttpContext.Session.SetString("user_id", user.Id.ToString());
+            HttpContext.Session.SetString("user_email", user.Email);
+            HttpContext.Session.SetString("user_name", user.Name);
+
+            // Redirecionar para frontend
+            var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5174";
+            return Redirect($"{frontendUrl}/?login=success");
+        }
+        catch (Exception ex)
         {
-            Id = user.Id,
-            GoogleId = user.GoogleId,
-            Email = user.Email,
-            Name = user.Name,
-            Picture = user.Picture
-        });
+            return BadRequest($"Erro durante autenticação: {ex.Message}");
+        }
     }
 
-    [HttpPost("logout")]
-    [Authorize]
-    public async Task<IActionResult> Logout()
+    private async Task<TokenResponse?> ExchangeCodeForTokenAsync(string code)
     {
-        await HttpContext.SignOutAsync();
-        return Ok(new { message = "Logout realizado com sucesso" });
+        using var httpClient = new HttpClient();
+        
+        var tokenRequest = new Dictionary<string, string>
+        {
+            {"client_id", Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")!},
+            {"client_secret", Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")!},
+            {"code", code},
+            {"grant_type", "authorization_code"},
+            {"redirect_uri", $"{Request.Scheme}://{Request.Host}/api/auth/callback/google"}
+        };
+
+        var content = new FormUrlEncodedContent(tokenRequest);
+        var response = await httpClient.PostAsync("https://oauth2.googleapis.com/token", content);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TokenResponse>(json);
+        }
+        
+        return null;
+    }
+
+    private async Task<UserInfo?> GetUserInfoAsync(string accessToken)
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        
+        var response = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<UserInfo>(json);
+        }
+        
+        return null;
+    }
+
+    private class TokenResponse
+    {
+        public string access_token { get; set; } = "";
+        public string token_type { get; set; } = "";
+        public int expires_in { get; set; }
+    }
+
+    private class UserInfo
+    {
+        public string id { get; set; } = "";
+        public string email { get; set; } = "";
+        public string name { get; set; } = "";
+        public string picture { get; set; } = "";
     }
 
     [HttpGet("profile")]
-    [Authorize]
     public async Task<IActionResult> GetProfile()
     {
-        var googleId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = HttpContext.Session.GetString("user_id");
         
-        if (string.IsNullOrEmpty(googleId))
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized();
+            return Unauthorized("Usuário não autenticado");
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id.ToString() == userId);
         
         if (user == null)
         {
@@ -128,5 +200,32 @@ public class AuthController : ControllerBase
             CreatedAt = user.CreatedAt,
             LastLoginAt = user.LastLoginAt
         });
+    }
+
+    [HttpGet("me")]
+    public IActionResult GetCurrentUser()
+    {
+        var userId = HttpContext.Session.GetString("user_id");
+        var userEmail = HttpContext.Session.GetString("user_email");
+        var userName = HttpContext.Session.GetString("user_name");
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("Usuário não autenticado");
+        }
+
+        return Ok(new
+        {
+            id = userId,
+            email = userEmail,
+            name = userName
+        });
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        HttpContext.Session.Clear();
+        return Ok(new { message = "Logout realizado com sucesso" });
     }
 }

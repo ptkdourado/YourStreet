@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("your-street-server")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fd58d4c2de41c3102c6c0e77ea174ee0b169c624")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0864698797732dc02ac97ecefb5bf7c1e64656db")]
 [assembly: System.Reflection.AssemblyProductAttribute("your-street-server")]
 [assembly: System.Reflection.AssemblyTitleAttribute("your-street-server")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
