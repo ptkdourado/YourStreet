@@ -1,4 +1,5 @@
 import { User } from "../../services/AuthService";
+import { useState } from "react";
 
 interface DashboardProps {
   user: User;
@@ -6,8 +7,23 @@ interface DashboardProps {
 }
 
 export function Dashboard({ user, onLogout }: DashboardProps) {
+  const [imageError, setImageError] = useState(false);
+  
   const handleLogout = async () => {
     await onLogout();
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -26,11 +42,18 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
             {/* Perfil do usuário */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full"
-                />
+                {user.picture && !imageError ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={handleImageError}
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-yellow-600 flex items-center justify-center text-white text-sm font-medium">
+                    {getInitials(user.name)}
+                  </div>
+                )}
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
@@ -39,7 +62,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:cursor-pointer"
               >
                 Sair
               </button>
@@ -68,7 +91,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             
             {/* Card Mapa */}
-            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
+            {/* <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
               <div className="p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -82,10 +105,10 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Card Comunidade */}
-            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
+            {/* <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
               <div className="p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -99,10 +122,10 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Card Relatar */}
-            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
+            {/* <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
               <div className="p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -116,12 +139,12 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
           </div>
 
           {/* Estatísticas */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          {/* <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
                 Suas Estatísticas
@@ -145,7 +168,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
 
         </div>
       </main>

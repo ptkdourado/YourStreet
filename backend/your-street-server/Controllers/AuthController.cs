@@ -203,22 +203,28 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("me")]
-    public IActionResult GetCurrentUser()
+    public async Task<IActionResult> GetCurrentUser()
     {
         var userId = HttpContext.Session.GetString("user_id");
-        var userEmail = HttpContext.Session.GetString("user_email");
-        var userName = HttpContext.Session.GetString("user_name");
 
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized("Usuário não autenticado");
         }
 
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id.ToString() == userId);
+        
+        if (user == null)
+        {
+            return NotFound("Usuário não encontrado");
+        }
+
         return Ok(new
         {
-            id = userId,
-            email = userEmail,
-            name = userName
+            id = user.Id.ToString(),
+            email = user.Email,
+            name = user.Name,
+            picture = user.Picture
         });
     }
 

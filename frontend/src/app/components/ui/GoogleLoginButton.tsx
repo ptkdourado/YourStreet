@@ -6,7 +6,7 @@ export default function GoogleLoginButton({ onClick }: GoogleLoginButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full bg-white hover:bg-gray-50 text-black py-3.5 px-4 rounded-xl border border-[#DADCE0] transition-all duration-200 hover:shadow-md flex items-center justify-center gap-3 min-h-[48px]"
+      className="w-full bg-white hover:bg-gray-50 text-black py-3.5 px-4 rounded-xl border border-[#DADCE0] transition-all duration-200 hover:shadow-md flex items-center justify-center gap-3 min-h-[48px] hover:cursor-pointer"
     >
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path 

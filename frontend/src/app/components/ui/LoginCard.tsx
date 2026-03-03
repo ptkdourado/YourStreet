@@ -40,7 +40,7 @@ export default function LoginCard({ onGoogleLogin, logoSrc }: LoginCardProps) {
 
       {/* Rodapé */}
       <p className="text-center text-sm text-gray-500 mt-8">
-        © 2026 YS Civic Platform – Transformando bairros juntos.
+        © 2026 YourStreet – Transformando bairros juntos.
       </p>
     </div>
   );
