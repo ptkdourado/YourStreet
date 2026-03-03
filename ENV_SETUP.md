@@ -20,7 +20,7 @@ Este projeto utiliza variáveis de ambiente para proteger dados sensíveis. Siga
    GOOGLE_CLIENT_SECRET=seu_google_client_secret_aqui
 
    # URLs
-   FRONTEND_URL=http://localhost:5174
+   FRONTEND_URL=http://localhost:5173
    BACKEND_URL=http://localhost:5186
 
    # Ambiente

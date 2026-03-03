@@ -107,7 +107,7 @@ public class AuthController : ControllerBase
             HttpContext.Session.SetString("user_name", user.Name);
 
             // Redirecionar para frontend
-            var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5174";
+            var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
             return Redirect($"{frontendUrl}/?login=success");
         }
         catch (Exception ex)

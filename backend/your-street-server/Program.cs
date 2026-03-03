@@ -30,13 +30,13 @@ builder.Services.AddSession(options =>
 // Configurar CORS
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
-    {
-        builder.WithOrigins("http://localhost:5173", "http://localhost:5174", "https://localhost:5173", "https://localhost:5174")
-               .AllowAnyMethod()
-               .AllowAnyHeader()
-               .AllowCredentials(); // Importante para cookies de sessão
-    });
+        options.AddDefaultPolicy(builder =>
+        {
+            builder.WithOrigins("http://localhost:5173", "https://localhost:5173")
+                   .AllowAnyMethod()
+                   .AllowAnyHeader()
+                   .AllowCredentials(); // Importante para cookies de sessão
+        });
 });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
