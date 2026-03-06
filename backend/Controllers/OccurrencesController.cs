@@ -156,6 +156,35 @@ public class OccurrencesController : ControllerBase
         return Ok();
     }
 
+    [HttpGet("{id}/comments")]
+    public async Task<IActionResult> GetComments(int id)
+    {
+        var occ = await _context.Occurrences.FindAsync(id);
+        if (occ == null) return NotFound("Ocorrência não encontrada");
+
+        var comments = await _context.OccurrenceComments
+            .Include(c => c.User)
+            .Where(c => c.OccurrenceId == id)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => new
+            {
+                id = c.Id,
+                userId = c.UserId,
+                text = c.Text,
+                createdAt = c.CreatedAt,
+                user = new
+                {
+                    id = c.User.Id,
+                    name = c.User.Name,
+                    email = c.User.Email,
+                    picture = c.User.Picture
+                }
+            })
+            .ToListAsync();
+
+        return Ok(comments);
+    }
+
     [HttpPost("{id}/comments")]
     public async Task<IActionResult> AddComment(int id, [FromBody] CreateCommentDto dto)
     {
