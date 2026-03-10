@@ -32,7 +32,6 @@ namespace your_street_server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GoogleId")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
@@ -42,6 +41,10 @@ namespace your_street_server.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Picture")

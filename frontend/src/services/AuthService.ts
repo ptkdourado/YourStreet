@@ -58,6 +58,52 @@ class AuthService {
     }
   }
 
+  // Login com email e senha
+  async loginWithEmail(email: string, password: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Falha no login');
+      }
+
+      // atualizar usuário interno
+      await this.checkCurrentUser();
+    } catch (error) {
+      console.error('Erro ao efetuar login com email:', error);
+      throw error;
+    }
+  }
+
+  // Registrar novo usuário com email e senha
+  async register(email: string, password: string, name: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Falha no registro');
+      }
+
+      // atualizar usuário interno
+      await this.checkCurrentUser();
+    } catch (error) {
+      console.error('Erro ao registrar usuário:', error);
+      throw error;
+    }
+  }
+
   // Fazer logout
   async logout(): Promise<void> {
     try {

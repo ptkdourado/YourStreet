@@ -56,12 +56,19 @@ Edite os arquivos `appsettings.json` e `appsettings.Development.json`:
 
 ## Endpoints da API
 
-### Autenticação
+### Autenticação (Google)
 
 - `GET /api/auth/login/google` - Inicia o processo de login com Google
 - `GET /api/auth/callback/google` - Callback do Google OAuth (usado automaticamente)
 - `POST /api/auth/logout` - Faz logout do usuário autenticado
 - `GET /api/auth/profile` - Retorna informações do usuário autenticado
+
+### Autenticação (Email/Senha)
+
+- `POST /api/auth/register` – Recebe JSON `{ email, password, name }` e cria um novo usuário, retornando um cookie de sessão.
+- `POST /api/auth/login` – Recebe JSON `{ email, password }` e realiza autenticação, retornando um cookie de sessão.
+
+(O restante dos endpoints continua igual.)
 
 ## Como Executar
 

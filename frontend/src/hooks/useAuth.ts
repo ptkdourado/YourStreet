@@ -5,7 +5,9 @@ interface UseAuthReturn {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => void;
+  login: () => void; // google
+  loginEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -17,6 +19,18 @@ export const useAuth = (): UseAuthReturn => {
 
   const login = () => {
     authService.loginWithGoogle();
+  };
+
+  const loginEmail = async (email: string, password: string) => {
+    await authService.loginWithEmail(email, password);
+    const currentUser = await authService.checkCurrentUser();
+    setUser(currentUser);
+  };
+
+  const register = async (email: string, password: string, name: string) => {
+    await authService.register(email, password, name);
+    const currentUser = await authService.checkCurrentUser();
+    setUser(currentUser);
   };
 
   const logout = async () => {
@@ -58,6 +72,8 @@ export const useAuth = (): UseAuthReturn => {
     isAuthenticated: user !== null,
     isLoading,
     login,
+    loginEmail,
+    register,
     logout,
     checkAuth,
   };

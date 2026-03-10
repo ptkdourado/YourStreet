@@ -26,8 +26,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email).IsUnique();
             
             entity.Property(u => u.GoogleId)
-                .IsRequired()
                 .HasMaxLength(255);
+
+            entity.Property(u => u.PasswordHash)
+                .HasMaxLength(500);
                 
             entity.Property(u => u.Email)
                 .IsRequired()

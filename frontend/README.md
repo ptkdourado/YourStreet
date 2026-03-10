@@ -14,5 +14,11 @@
   ## Backend integration
 
   Backend API URL is supplied via the environment variable `VITE_API_URL` in `frontend/.env`.
-  It should be set to `https://yourstreet-afh0echkdsbqf6ft.brazilsouth-01.azurewebsites.net/api`.
+It should be set to `https://yourstreet-afh0echkdsbqf6ft.brazilsouth-01.azurewebsites.net/api`.
+
+## Login options
+
+The login card now lets users authenticate either via Google (OAuth redirect) or with a traditional
+email/password form. The form is displayed when the user clicks "Entrar com email" and supports
+registration and login flows.
   

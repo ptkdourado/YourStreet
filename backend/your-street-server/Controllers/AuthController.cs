@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using your_street_server.Data;
 using your_street_server.Models;
+using your_street_server.Services;
 
 namespace your_street_server.Controllers;
 
@@ -200,6 +201,77 @@ public class AuthController : ControllerBase
             CreatedAt = user.CreatedAt,
             LastLoginAt = user.LastLoginAt
         });
+    }
+
+    // Models for email auth requests
+    public class LoginRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class RegisterRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(request.Name))
+        {
+            return BadRequest("Email, nome e senha são obrigatórios");
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        {
+            return BadRequest("Email já cadastrado");
+        }
+
+        var user = new User
+        {
+            Email = request.Email,
+            Name = request.Name,
+            PasswordHash = PasswordHasher.HashPassword(request.Password),
+            CreatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
+        };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // logar automaticamente
+        HttpContext.Session.SetString("user_id", user.Id.ToString());
+        HttpContext.Session.SetString("user_email", user.Email);
+        HttpContext.Session.SetString("user_name", user.Name);
+
+        return Ok(new { message = "Registro realizado" });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+        {
+            return BadRequest("Email e senha são obrigatórios");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null || user.PasswordHash == null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
+        {
+            return Unauthorized("Credenciais inválidas");
+        }
+
+        user.LastLoginAt = DateTime.UtcNow;
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+
+        HttpContext.Session.SetString("user_id", user.Id.ToString());
+        HttpContext.Session.SetString("user_email", user.Email);
+        HttpContext.Session.SetString("user_name", user.Name);
+
+        return Ok(new { message = "Login bem-sucedido" });
     }
 
     [HttpGet("me")]
